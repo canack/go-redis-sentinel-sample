@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    hostname: redis-master
+    volumes:
+      - ./master/redis-master.conf:/usr/local/etc/redis/redis.conf
+      - ./data/master:/data
+    command: ["sh", "-c", "mkdir -p /var/log/redis && redis-server /usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6381:6381"
+    networks:
+      - redis-network
+
+  redis-replica1:
+    image: redis:latest
+    container_name: redis-replica1
+    hostname: redis-replica1
+    volumes:
+      - ./replica1/redis-replica.conf:/usr/local/etc/redis/redis.conf
+      - ./data/replica1:/data
+    command: ["sh", "-c", "mkdir -p /var/log/redis && redis-server /usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6382:6382"
+    networks:
+      - redis-network
+    depends_on:
+      - redis-master
+
+  redis-replica2:
+    image: redis:latest
+    container_name: redis-replica2
+    hostname: redis-replica2
+    volumes:
+      - ./replica2/redis-replica.conf:/usr/local/etc/redis/redis.conf
+      - ./data/replica2:/data
+    command: ["sh", "-c", "mkdir -p /var/log/redis && redis-server /usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6383:6383"
+    networks:
+      - redis-network
+    depends_on:
+      - redis-master
+
+  redis-sentinel:
+    image: redis:latest
+    container_name: redis-sentinel
+    hostname: redis-sentinel
+    volumes:
+      - ./sentinel/redis-sentinel.conf:/usr/local/etc/redis/sentinel.conf
+    command: ["sh", "-c", "mkdir -p /var/log/redis && cp /usr/local/etc/redis/sentinel.conf /usr/local/etc/redis/sentinel2.conf && redis-sentinel /usr/local/etc/redis/sentinel2.conf"]
+    ports:
+      - "26380:26380"
+    networks:
+      - redis-network
+    depends_on:
+      - redis-master
+      - redis-replica1
+      - redis-replica2
+    restart: always
+
+networks:
+  redis-network:
+    driver: bridge
